@@ -1,0 +1,21 @@
+[Успех] Бинарник успешно собран: build-asan/build/MandelbrotFractal
+----------------------------------------
+[Инфо] Запуск приложения с ASan
+----------------------------------------
+[Инфо] Подавления включены: /workspaces/sprint-9/asan.supp
+[Инфо] Для завершения приложения нажмите Enter в окне
+Setting vertical sync not supported
+=== Mandelbrot Fractal Renderer ===
+
+Controls:
+  Left Mouse Button  - Zoom In
+  Right Mouse Button - Zoom Out
+  X                  - Toggle Auto Zoom (infinite zoom to 'Seahorse Valley' point)
+  C                  - Reset to Initial View
+  Close Window       - Exit
+
+hardware_concurrency: 16
+
+----------------------------------------
+[Успех] Приложение завершилось успешно (код 0).
+----------------------------------------
