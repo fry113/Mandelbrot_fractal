@@ -41,7 +41,7 @@ TEST(FrameBuffer, MakeTest) {
 
     EXPECT_EQ(fb.width, 20);
     EXPECT_EQ(fb.height, 50);
-    EXPECT_EQ(fb.rgba.size(), 4'000);
+    EXPECT_EQ(fb.rgba.size(), 20 * 50 * FrameBuffer::BYTES_PER_PIXEL);
 }
 
 TEST(Pipelines, JustSenderTest) {
@@ -71,8 +71,8 @@ TEST(Pipelines, MakeComputeTest) {
     auto op = sender.connect(std::move(TestComputeReceiver(&value_set, &error_set, &stopped_set, &fb)));
     op.start();
 
-    EXPECT_EQ(fb.rgba.size(), 40'000);
-    for (size_t i = 0; i + 4 < fb.rgba.size(); i += 4) {
+    EXPECT_EQ(fb.rgba.size(), settings.width * settings.height * FrameBuffer::BYTES_PER_PIXEL);
+    for (size_t i = 0; i + FrameBuffer::BYTES_PER_PIXEL <= fb.rgba.size(); i += FrameBuffer::BYTES_PER_PIXEL) {
         EXPECT_EQ(fb.rgba[i + 3], 0xFF);
     }
 }
@@ -107,7 +107,7 @@ TEST(Pipelines, ImageTest) {
     EXPECT_FALSE(stopped_set);
     ASSERT_TRUE(result.has_value());
     auto [pixel_count] = result.value();
-    EXPECT_EQ(pixel_count, 40'000ul);
+    EXPECT_EQ(pixel_count, settings.width * settings.height * FrameBuffer::BYTES_PER_PIXEL);
 }
 
 int main(int argc, char **argv) {

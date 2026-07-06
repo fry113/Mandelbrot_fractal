@@ -30,10 +30,9 @@ namespace ex = stdexec;
 
 class WaitForFPS {
 public:
-    static constexpr float TARGET_FPS = 60.0f;
-    static constexpr float FRAME_TIME_MS = 1000.0f / TARGET_FPS;
+    static constexpr unsigned int TARGET_FPS = 60;
 
-    explicit WaitForFPS(FrameClock &frame_clock, unsigned int target_fps)
+    explicit WaitForFPS(FrameClock &frame_clock, unsigned int target_fps = TARGET_FPS)
         : frame_clock_(frame_clock), frame_time_(1s / target_fps) {}
 
     void operator()() {
@@ -47,7 +46,7 @@ public:
 
 private:
     FrameClock &frame_clock_;
-    const std::chrono::milliseconds frame_time_ = 1ms;
+    const std::chrono::nanoseconds frame_time_ = 1'000ns;
 };
 
 class MandelbrotApp {
@@ -60,17 +59,15 @@ public:
         auto compute_sched = compute_pool_.get_scheduler();
         auto sfml_sched = sfml_thread_.get_scheduler();
 
-        auto initialize =
-            ex::on(sfml_sched,
-                   ex::just() | ex::then([this]() {
-                       state_ = std::make_unique<SfmlState>(  //
-                           RenderSettings{.width = 800, .height = 600, .max_iterations = 100, .escape_radius = 2.0});
-                   }));
+        auto initialize = ex::on(sfml_sched, ex::just() | ex::then([this]() {
+                                                 state_ = std::make_unique<SfmlState>(  //
+                                                     RenderSettings{});  // RenderSettings{} подтянутся default settings
+                                             }));
         ex::sync_wait(std::move(initialize));
 
         auto set_handler = [this]() {
             SfmlEventHandler sfml_handler{state_->window, state_->render_settings, state_->app_state};
-            sfml_handler.getHandle();
+            sfml_handler.GetHandle();
         };
 
         // clang-format off
@@ -88,7 +85,7 @@ public:
                                  ex::continues_on(sfml_sched) | render::MakeSfmlDisplaySender(*state_) |
                                  ex::then([](auto &&...) {})};
               })
-            | ex::then(WaitForFPS{state_->frame_clock, 60});
+            | ex::then(WaitForFPS{state_->frame_clock});
         // clang-format on
 
         auto repeated_pipeline = std::move(process_frame) | ex::then([this] { return state_->app_state.should_exit; }) |

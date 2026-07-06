@@ -24,15 +24,14 @@ public:
 
         void start() {
             try {
-                HandleEvents();
-                HandleAutoZoom();
+                GetHandle();
                 ex::set_value(std::move(receiver_));
             } catch (...) {
                 ex::set_error(std::move(receiver_), std::current_exception());
             }
         }
 
-        void getHandle() {
+        void GetHandle() {
             HandleEvents();
             HandleAutoZoom();
         }
@@ -151,7 +150,7 @@ public:
     SfmlEventHandler(sf::RenderWindow &window, RenderSettings render_settings, AppState &state)
         : window_{window}, render_settings_{render_settings}, state_{state} {}
 
-    void getHandle() { OperationState<DummyReceiver>{DummyReceiver{}, window_, render_settings_, state_}.getHandle(); }
+    void GetHandle() { OperationState<DummyReceiver>{DummyReceiver{}, window_, render_settings_, state_}.GetHandle(); }
 
     template <typename Receiver>
     auto connect(Receiver &&receiver) {

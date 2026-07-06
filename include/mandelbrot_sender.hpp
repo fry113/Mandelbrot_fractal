@@ -26,7 +26,7 @@ static auto MakeComputeSender(RenderSettings settings, ViewPort viewport, FrameB
                 auto complex = Pixel2DToComplex(x, y, viewport, width, height);
                 auto iterations = CalculateIterationsForPoint(complex, settings.max_iterations, settings.escape_radius);
                 auto color = IterationsToColor(iterations, settings.max_iterations);
-                size_t point_idx = (line + x) * 4;
+                size_t point_idx = (line + x) * FrameBuffer::BYTES_PER_PIXEL;
 
                 fb->rgba[point_idx + 0] = color.r;
                 fb->rgba[point_idx + 1] = color.g;
