@@ -15,6 +15,8 @@
 // Holds the framebuffer data for rendering
 //
 struct FrameBuffer {
+    static constexpr std::size_t BYTES_PER_PIXEL = 4u;
+
     std::uint32_t width{};
     std::uint32_t height{};
     std::vector<sf::Uint8> rgba;
@@ -23,7 +25,7 @@ struct FrameBuffer {
         FrameBuffer fb;
         fb.width = w;
         fb.height = h;
-        fb.rgba.resize(static_cast<size_t>(w) * h * 4u);
+        fb.rgba.resize(static_cast<size_t>(w) * h * BYTES_PER_PIXEL);
         return fb;
     }
 };

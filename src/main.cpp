@@ -1,10 +1,19 @@
 #include <chrono>
+#include <exception>
 #include <memory>
 #include <print>
 #include <thread>
 #include <utility>
 
 #include <SFML/Graphics.hpp>
+
+// для Linux надо использовать SFML/GLX из рабочих потоков (ASan ругается в X11 из контейнера)
+#ifdef __linux__
+#include <X11/Xlib.h>
+#ifdef Complex
+#undef Complex
+#endif
+#endif
 
 #include <exec/any_sender_of.hpp>
 #include <exec/repeat_effect_until.hpp>
@@ -21,10 +30,9 @@ namespace ex = stdexec;
 
 class WaitForFPS {
 public:
-    static constexpr float TARGET_FPS = 60.0f;
-    static constexpr float FRAME_TIME_MS = 1000.0f / TARGET_FPS;
+    static constexpr unsigned int TARGET_FPS = 60;
 
-    explicit WaitForFPS(FrameClock &frame_clock, unsigned int target_fps)
+    explicit WaitForFPS(FrameClock &frame_clock, unsigned int target_fps = TARGET_FPS)
         : frame_clock_(frame_clock), frame_time_(1s / target_fps) {}
 
     void operator()() {
@@ -38,7 +46,7 @@ public:
 
 private:
     FrameClock &frame_clock_;
-    const std::chrono::milliseconds frame_time_ = 1ms;
+    const std::chrono::nanoseconds frame_time_ = 1'000ns;
 };
 
 class MandelbrotApp {
@@ -51,20 +59,48 @@ public:
         auto compute_sched = compute_pool_.get_scheduler();
         auto sfml_sched = sfml_thread_.get_scheduler();
 
-        auto initialize =
-            ex::on(sfml_sched,
-                   ex::just() | ex::then([this]() {
-                       state_ = std::make_unique<SfmlState>(  //
-                           RenderSettings{.width = 800, .height = 600, .max_iterations = 100, .escape_radius = 2.0});
-                   }));
+        auto initialize = ex::on(sfml_sched, ex::just() | ex::then([this]() {
+                                                 state_ = std::make_unique<SfmlState>(  //
+                                                     RenderSettings{});  // RenderSettings{} подтянутся default settings
+                                             }));
         ex::sync_wait(std::move(initialize));
 
-        auto process_frame = ex::just(); // Ваш код здесь
+        auto set_handler = [this]() {
+            SfmlEventHandler sfml_handler{state_->window, state_->render_settings, state_->app_state};
+            sfml_handler.GetHandle();
+        };
+
+        // clang-format off
+        auto process_frame = ex::just() 
+            | ex::continues_on(sfml_sched)
+            | ex::then(set_handler) 
+            | ex::continues_on(compute_sched) 
+            | ex::let_value([this, sfml_sched]() -> AnySender {
+                if (state_->app_state.should_exit || !state_->app_state.need_rerender) {
+                    return AnySender{ex::just()};
+                }
+                state_->app_state.need_rerender = false;
+
+                return AnySender{mandelbrot::MakeComputeSender(state_->render_settings, state_->app_state.viewport, &state_->fb) |
+                                 ex::continues_on(sfml_sched) | render::MakeSfmlDisplaySender(*state_) |
+                                 ex::then([](auto &&...) {})};
+              })
+            | ex::then(WaitForFPS{state_->frame_clock});
+        // clang-format on
 
         auto repeated_pipeline = std::move(process_frame) | ex::then([this] { return state_->app_state.should_exit; }) |
                                  exec::repeat_effect_until();
         ex::sync_wait(std::move(repeated_pipeline));
+
+        // все SFML/OpenGL ресурсы должны быть уничтожены в том же потоке, в котором они были созданы
+        auto finalize = ex::on(sfml_sched, ex::just() | ex::then([this]() { state_.reset(); }));
+        ex::sync_wait(std::move(finalize));
     }
+
+private:  // types
+    using FrameCompletionsSignature =
+        ex::completion_signatures<ex::set_value_t(), ex::set_error_t(std::exception_ptr), ex::set_stopped_t()>;
+    using AnySender = exec::any_receiver_ref<FrameCompletionsSignature>::any_sender<>;
 
 private:
     std::unique_ptr<SfmlState> state_;
@@ -74,6 +110,12 @@ private:
 };
 
 int main() {
+#ifdef __linux__
+    // SFML/GLX используется из рабочих потоков, Xlib переведен в потокобезопасный режим
+    // (иначе ASan ругается в X11 из контейнера)
+    XInitThreads();
+#endif
+
     std::println("=== Mandelbrot Fractal Renderer ===\n");
     std::println("Controls:");
     std::println("  Left Mouse Button  - Zoom In");

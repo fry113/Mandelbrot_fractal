@@ -2,5 +2,19 @@
     "files.eol": "\n",
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
-    "clangd.path": "/usr/bin/clangd-20"
+    "clangd.path": "/usr/bin/clangd-20",
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    },
+    "cSpell.customDictionaries": {
+        "custom-dictionary-workspace": {
+            "name": "custom-dictionary-workspace",
+            "path": "${workspaceFolder:sprint-9}/.cspell/custom-dictionary-workspace.txt",
+            "addWords": true,
+            "scope": "workspace"
+        }
+    },
+    "cSpell.words": [
+        "Мандельброта"
+    ]
 }

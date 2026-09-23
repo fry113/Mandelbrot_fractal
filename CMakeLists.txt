@@ -16,6 +16,9 @@ endif()
 # Ищем необходимые библиотеки
 find_package(GTest REQUIRED)
 find_package(SFML COMPONENTS graphics window system REQUIRED)
+if(UNIX AND NOT APPLE)
+    find_package(X11 REQUIRED)
+endif()
 
 include(FetchContent)
 FetchContent_Declare(
@@ -52,6 +55,10 @@ target_link_libraries(${PROJECT_NAME}_imp PUBLIC
     STDEXEC::stdexec
     sfml-graphics sfml-window sfml-system)
 
+if(UNIX AND NOT APPLE)
+    target_link_libraries(${PROJECT_NAME}_imp PUBLIC X11::X11)
+endif()
+
 # Создаём исполняемый таргет и линкуем к нему статическую библиотеку
 add_executable(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/src/main.cpp")
 target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_imp)
@@ -78,3 +85,26 @@ target_include_directories(${PROJECT_NAME}_tests PUBLIC
 # Включаем тестирование
 enable_testing()
 add_test(NAME ${PROJECT_NAME}_tests COMMAND ${PROJECT_NAME}_tests)
+
+#
+# ASan build helper target
+#
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_custom_target(asan-build
+    COMMAND conan install ${CMAKE_SOURCE_DIR}
+        -of ${CMAKE_SOURCE_DIR}/build-asan
+        -s build_type=Debug
+        -b missing
+        COMMAND ${CMAKE_COMMAND} -S ${CMAKE_SOURCE_DIR} -B ${CMAKE_SOURCE_DIR}/build-asan/build
+                -DCMAKE_BUILD_TYPE=Debug
+            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_SOURCE_DIR}/build-asan/build/conan/conan_toolchain.cmake
+            -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
+                -DCMAKE_CXX_FLAGS=-fsanitize=address\ -fno-omit-frame-pointer\ -g
+                -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address
+                -DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_SOURCE_DIR}/build-asan/build --parallel
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Configure and build ASan/UBSan variant in build-asan"
+        VERBATIM
+    )
+endif()

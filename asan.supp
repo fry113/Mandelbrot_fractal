@@ -1,0 +1,7 @@
+# LeakSanitizer suppressions for external graphics stack leaks in container/X11.
+# These rules suppress known leaks in system libs to focus on project code.
+
+leak:libGLX_indirect.so
+leak:libsfml-window.so
+leak:sf::GlResource::GlResource
+leak:sf::Window::Window
