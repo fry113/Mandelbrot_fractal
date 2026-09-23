@@ -29,7 +29,12 @@
   },
   "postCreateCommand": "apt-get update && apt-get install -y libxrender1 libxext6 libgl1-mesa-glx",
   "mounts": [
-    "source=${env:HOME}/.gitconfig,target=/home/dev/.gitconfig,type=bind,consistency=cached",
-    "source=${env:HOME}/.conan2,target=/home/dev/.conan2,type=bind,consistency=cached"
+    "source=D:/0_git/.gitconfig,target=/home/dev/.gitconfig,type=bind,consistency=cached",
+    "source=C:/.conan2,target=/home/dev/.conan2,type=bind,consistency=cached",
+    "source=vscode-global-storage,target=/home/dev/.config/Code/User/globalStorage/saoudrizwan.claude-dev,type=volume"
+
+  ],
+  "runArgs": [
+    "--add-host=host.docker.internal:host-gateway"
   ]
 }

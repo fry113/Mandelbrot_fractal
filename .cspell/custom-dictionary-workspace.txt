@@ -1,0 +1,5 @@
+# Custom Dictionary Words
+coef
+sfml
+sfml_sched
+sfmle
